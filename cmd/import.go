@@ -144,7 +144,7 @@ func (t *TransactionImporter) parseTransations() error {
 		fmt.Sprintf("=SUM(%s%d:%s%d)", t.startColumn, t.startRowIndex, t.startColumn, t.currentRow-1),
 		fmt.Sprintf("=SUM(%s%d:%s%d)", "B", t.startRowIndex, "B", t.currentRow-1),
 		fmt.Sprintf("=AVERAGE(%s%d:%s%d)", "C", t.startRowIndex, "C", t.currentRow-1),
-		fmt.Sprintf("=AVERAGE(%s%d:%s%d)", "D", t.startRowIndex, "D", t.currentRow-1),
+		fmt.Sprintf("=MINUS(DIVIDE(SUM(%[1]s%[3]d,%[2]s%[3]d), ABS(%[1]s%[3]d)),1)", "A", "E", t.currentRow),
 		fmt.Sprintf("=SUM(%s%d:%s%d)", "E", t.startRowIndex, "E", t.currentRow-1),
 	}
 	err = t.writeRowData(footer)
@@ -158,6 +158,7 @@ func (t *TransactionImporter) parseTransations() error {
 	}
 
 	// format data for readability
+	// TODO(igaskin): need to null out all previous formatting
 	resp, err := t.Googlesheet.Spreadsheets.BatchUpdate(t.SpreadsheetID, &sheets.BatchUpdateSpreadsheetRequest{
 		Requests: []*sheets.Request{
 			{
