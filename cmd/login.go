@@ -96,28 +96,9 @@ func Run() {
 	}
 	client := getClient(config)
 
-	srv, err := sheets.New(client)
+	_, err = sheets.New(client)
 	if err != nil {
 		log.Fatalf("Unable to retrieve Sheets client: %v", err)
 	}
 
-	// Prints the names and majors of students in a sample spreadsheet:
-	// https://docs.google.com/spreadsheets/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms/edit
-	// spreadsheetId := "1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms"
-	spreadsheetId := "1X0fZYJMPpCEsZP7_lNqLkzWJiVxLCF1_b40AbGND_sU"
-	readRange := "Dividends!A2:E"
-	resp, err := srv.Spreadsheets.Values.Get(spreadsheetId, readRange).Do()
-	if err != nil {
-		log.Fatalf("Unable to retrieve data from sheet: %v", err)
-	}
-
-	if len(resp.Values) == 0 {
-		fmt.Println("No data found.")
-	} else {
-		fmt.Println("Name, Major:")
-		for _, row := range resp.Values {
-			// Print columns A and E, which correspond to indices 0 and 4.
-			fmt.Printf("%s, %s\n", row[0], row[4])
-		}
-	}
 }

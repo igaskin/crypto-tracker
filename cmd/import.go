@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/csv"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -13,6 +14,7 @@ import (
 	"reflect"
 	"strings"
 
+	"github.com/igaskin/crypto-tracker/lib"
 	"github.com/spf13/cobra"
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/googleapi"
@@ -21,14 +23,15 @@ import (
 
 func NewImportCommand() *cobra.Command {
 	var (
+		accountID              string
 		cryptoTransactionsFile string
 		fiat                   string
 		spreadsheetID          string
 		spreadSheetName        string
 	)
 	const (
-		defaultSpreadsheetID   = "REDACTED"
-		defaultSpreadsheetName = "Sheet1"
+		defaultSpreadsheetName = "ROI"
+		defaultExplorer        = "https://crypto.org/explorer/api/v1/"
 	)
 	var command = &cobra.Command{
 		Use:   "import",
@@ -43,10 +46,27 @@ func NewImportCommand() *cobra.Command {
 				StartColumn:            "A", // TODO(igaskin): fix bugs so that this can be something other than "A"
 				Fiat:                   fiat,
 			})
+			if err := importer.Validate(); err != nil {
+				log.Fatal(err)
+			}
 			if err := importer.parseTransations(); err != nil {
 				log.Fatalf("failed to import transactions; %v", err)
 			}
-
+			if accountID != "" {
+				client := lib.NewExplorerClient(defaultExplorer)
+				ctx := context.Background()
+				resp, err := client.GetAccount(ctx, &lib.GetAccountOpts{
+					AccountID: accountID,
+				})
+				if err != nil {
+					log.Fatalf("failed to get account; %v", err)
+				}
+				fmt.Printf("total balance: %s\nusable balance: %s\ntotal rewards: %s\n",
+					resp.Result.Totalbalance[0].Amount,
+					resp.Result.Balance[0].Amount,
+					resp.Result.Totalrewards[0].Amount,
+				)
+			}
 		},
 	}
 
@@ -55,10 +75,10 @@ func NewImportCommand() *cobra.Command {
 	// the fiat type should be implied from the transactions file
 	command.Flags().StringVar(&fiat, "fiat", "USD", "type of fiat to use (USD or EUR")
 	command.Flags().StringVarP(&cryptoTransactionsFile, "file", "f", "crypto_transations.csv", "cyrpto transactions csv file")
-	command.Flags().StringVarP(&spreadsheetID, "spreadsheet-id", "s", defaultSpreadsheetID, "id of google sheet (found in the URL)")
+	command.Flags().StringVarP(&spreadsheetID, "spreadsheet-id", "s", "", "id of google sheet (found in the URL)")
 	command.Flags().StringVarP(&spreadSheetName, "spreadsheet-name", "n", defaultSpreadsheetName, "name of google sheet")
+	command.Flags().StringVarP(&accountID, "account-id", "a", "", "cyrpto.org account id")
 	return command
-
 }
 
 type PurchaseEvent string
@@ -80,6 +100,13 @@ const (
 	signupBonus    EarnEvent     = "Sign-up Bonus Unlocked"
 	cryptoEarn     EarnEvent     = "Crypto Earn"
 )
+
+func (t *TransactionImporter) Validate() error {
+	if t.SpreadsheetID == "" {
+		return errors.New("Missing spreadsheet-id")
+	}
+	return nil
+}
 
 func (t *TransactionImporter) getSheetID() error {
 	sheet, err := t.Googlesheet.Spreadsheets.Get(t.SpreadsheetID).Fields(googleapi.Field("sheets.properties")).Context(context.Background()).Do()
