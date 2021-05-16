@@ -185,7 +185,6 @@ func (t *TransactionImporter) parseTransations() error {
 	}
 
 	// format data for readability
-	// TODO(igaskin): need to null out all previous formatting
 	resp, err := t.Googlesheet.Spreadsheets.BatchUpdate(t.SpreadsheetID, &sheets.BatchUpdateSpreadsheetRequest{
 		Requests: []*sheets.Request{
 			{
@@ -309,6 +308,36 @@ func (t *TransactionImporter) parseTransations() error {
 						},
 					},
 					Fields: "userEnteredFormat.textFormat",
+				},
+			},
+			// clear any existing boarders
+			{
+				UpdateBorders: &sheets.UpdateBordersRequest{
+					Range: &sheets.GridRange{
+						StartColumnIndex: t.startColumnIndex,
+						EndColumnIndex:   t.startColumnIndex + 5,
+						StartRowIndex:    t.startRowIndex - 1,
+						EndRowIndex:      t.currentRow,
+						SheetId:          t.sheetID,
+					},
+					Top: &sheets.Border{
+						Style: "NONE",
+					},
+					InnerHorizontal: &sheets.Border{
+						Style: "NONE",
+					},
+					Bottom: &sheets.Border{
+						Style: "NONE",
+					},
+					InnerVertical: &sheets.Border{
+						Style: "NONE",
+					},
+					Left: &sheets.Border{
+						Style: "NONE",
+					},
+					Right: &sheets.Border{
+						Style: "NONE",
+					},
 				},
 			},
 			// add border to footer
